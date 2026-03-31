@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Send, ShieldAlert } from 'lucide-react';
 import Link from 'next/link';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const getApiUrl = () => (typeof window !== 'undefined' && (window as any).ENV?.API_URL) ? (window as any).ENV.API_URL : 'http://localhost:3001';
 
 export default function Login() {
   const [username, setUsername] = useState('');
@@ -18,7 +18,7 @@ export default function Login() {
     setError('');
 
     try {
-      const res = await fetch(`${API_URL}/api/auth/login`, {
+      const res = await fetch(`${getApiUrl()}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

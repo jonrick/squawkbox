@@ -7,10 +7,12 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import manifest from '../../version.json';
 
-// Dynamic Runtime API URL Injection (Allows Docker/Portainer .env changes WITHOUT rebuilds)
-const API_URL = (typeof window !== 'undefined' && (window as any).ENV?.API_URL) 
-  || process.env.NEXT_PUBLIC_API_URL 
-  || 'http://localhost:3001';
+// Lazy getter — called at runtime inside useEffect/handlers where window is always available.
+// This prevents Next.js SSR from freezing it as 'localhost' before window.ENV is populated.
+const getApiUrl = () =>
+  (typeof window !== 'undefined' && (window as any).ENV?.API_URL)
+    ? (window as any).ENV.API_URL
+    : 'http://localhost:3001';
 
 interface Squawk {
   id: number;
@@ -42,7 +44,7 @@ export default function Home() {
     }
 
     // Fetch health for Gateway ID
-    fetch(`${API_URL}/api/health`)
+    fetch(`${getApiUrl()}/api/health`)
       .then(res => res.json())
       .then(data => {
         if (data.node) {
@@ -51,14 +53,14 @@ export default function Home() {
       })
       .catch(console.error);
 
-    fetch(`${API_URL}/api/squawks`)
+    fetch(`${getApiUrl()}/api/squawks`)
       .then(res => res.json())
       .then(data => {
         setSquawks(Array.isArray(data) ? data : []);
       })
       .catch(console.error);
 
-    const socket = io(API_URL);
+    const socket = io(getApiUrl());
     socketRef.current = socket;
 
     socket.on('new_squawk', (squawk: Squawk) => {
@@ -83,7 +85,7 @@ export default function Home() {
     const currentReplyId = replyingTo?.id;
     setReplyingTo(null);
 
-    const res = await fetch(`${API_URL}/api/squawk`, {
+    const res = await fetch(`${getApiUrl()}/api/squawk`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -96,7 +98,7 @@ export default function Home() {
   };
 
   const handleLogout = async () => {
-    await fetch(`${API_URL}/api/auth/logout`, { method: 'POST', credentials: 'include' });
+    await fetch(`${getApiUrl()}/api/auth/logout`, { method: 'POST', credentials: 'include' });
     localStorage.removeItem('squawk_user');
     setUser(null);
   }

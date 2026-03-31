@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Send, ShieldAlert, Fingerprint } from 'lucide-react';
 import Link from 'next/link';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const getApiUrl = () => (typeof window !== 'undefined' && (window as any).ENV?.API_URL) ? (window as any).ENV.API_URL : 'http://localhost:3001';
 
 export default function Register() {
   const [username, setUsername] = useState('');
@@ -24,7 +24,7 @@ export default function Register() {
     }
 
     try {
-      const res = await fetch(`${API_URL}/api/auth/register`, {
+      const res = await fetch(`${getApiUrl()}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

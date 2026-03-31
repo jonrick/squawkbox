@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ShieldCheck, UserCheck, XCircle, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const getApiUrl = () => (typeof window !== 'undefined' && (window as any).ENV?.API_URL) ? (window as any).ENV.API_URL : 'http://localhost:3001';
 
 interface PendingUser {
   id: number;
@@ -36,7 +36,7 @@ export default function AdminPanel() {
 
   const fetchPending = async () => {
     try {
-      const res = await fetch(`${API_URL}/api/admin/pending`, {
+      const res = await fetch(`${getApiUrl()}/api/admin/pending`, {
         credentials: 'include'
       });
       if (!res.ok) throw new Error("Unauthorized");
@@ -52,7 +52,7 @@ export default function AdminPanel() {
       // Optimistic UI Update
       setPendingUsers(prev => prev.filter(u => u.id !== id));
 
-      await fetch(`${API_URL}/api/admin/${action}/${id}`, {
+      await fetch(`${getApiUrl()}/api/admin/${action}/${id}`, {
         method: action === 'approve' ? 'POST' : 'DELETE',
         credentials: 'include'
       });
