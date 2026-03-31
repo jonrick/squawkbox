@@ -1,0 +1,42 @@
+generator client {
+  provider = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            Int      @id @default(autoincrement())
+  username      String   @unique
+  password_hash String
+  is_approved   Boolean  @default(false)
+  is_admin      Boolean  @default(false)
+  created_at    DateTime @default(now())
+}
+
+model Squawk {
+  id             Int      @id @default(autoincrement())
+  author         String
+  node_id        String
+  message        String
+  is_global      Boolean  @default(false)
+  reply_to_id    Int?
+  parent_squawk  Squawk?  @relation("SquawkReplies", fields: [reply_to_id], references: [id])
+  child_squawks  Squawk[] @relation("SquawkReplies")
+  
+  // Real Telemetry Data
+  snr            Float?
+  rssi           Int?
+  hops           Int?
+  
+  created_at     DateTime @default(now())
+}
+
+model Connection {
+  id         String   @id
+  status     String
+  updated_at DateTime @updatedAt
+}

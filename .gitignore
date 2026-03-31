@@ -137,3 +137,21 @@ dist
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# --- SquawkBox Specific ---
+# Prisma
+backend/prisma/*.db
+backend/prisma/*.db-journal
+
+# Backend build output
+backend/dist/
+
+# IDEs
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS Files
+.DS_Store
+Thumbs.db

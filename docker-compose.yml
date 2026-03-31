@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  backend:
+    image: ghcr.io/${GITHUB_USER:-jonrick}/squawkbox-backend:latest
+    ports:
+      - "${BACKEND_PORT:-3001}:3001"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=${DATABASE_URL:-file:/app/prisma/dev.db}
+      - MESHTASTIC_IP=${MESHTASTIC_IP}
+      - MESHTASTIC_PORT=${MESHTASTIC_PORT}
+      - MESHTASTIC_CHANNEL=${MESHTASTIC_CHANNEL:-0}
+      - GATEWAY_NODE_ID=${GATEWAY_NODE_ID}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_COOKIE_MODE=${JWT_COOKIE_MODE:-false}
+    volumes:
+      - squawkbox_db:/app/prisma
+    restart: unless-stopped
+
+  frontend:
+    image: ghcr.io/${GITHUB_USER:-jonrick}/squawkbox-frontend:latest
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:3001}
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  squawkbox_db:
