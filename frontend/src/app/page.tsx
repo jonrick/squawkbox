@@ -5,7 +5,7 @@ import { io, Socket } from 'socket.io-client';
 import { Send, Radio, LogOut, ShieldCheck, Activity, Route, Signal, Reply, X, Github } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import manifest from '../../../version.json';
+import manifest from '../../version.json';
 
 // Dynamic Runtime API URL Injection (Allows Docker/Portainer .env changes WITHOUT rebuilds)
 const API_URL = (typeof window !== 'undefined' && (window as any).ENV?.API_URL) 
