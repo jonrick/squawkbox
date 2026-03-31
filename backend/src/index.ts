@@ -14,6 +14,13 @@ const GATEWAY_NODE_ID = process.env.GATEWAY_NODE_ID || '1234';
 // JWT Configuration
 const JWT_SECRET = process.env.JWT_SECRET || 'squawkbox_super_secret_key_change_me';
 
+declare module 'fastify' {
+  interface FastifyInstance {
+    authenticate: any;
+    requireAdmin: any;
+  }
+}
+
 declare module '@fastify/jwt' {
   interface FastifyJWT {
     payload: { id: number; username: string; is_admin: boolean }
@@ -149,12 +156,12 @@ async function start() {
     return { success: true };
   });
 
-  fastify.get('/api/auth/me', { preValidation: [fastify.authenticate] }, async (req, res) => {
+  fastify.get('/api/auth/me', { preValidation: [(fastify as any).authenticate] }, async (req, res) => {
     return { user: req.user };
   });
 
   // --- ADMIN ROUTES ---
-  fastify.get('/api/admin/pending', { preValidation: [fastify.authenticate, fastify.requireAdmin] }, async (req, reply) => {
+  fastify.get('/api/admin/pending', { preValidation: [(fastify as any).authenticate, (fastify as any).requireAdmin] }, async (req, reply) => {
     const pending = await prisma.user.findMany({
       where: { is_approved: false },
       select: { id: true, username: true, created_at: true }
@@ -162,7 +169,7 @@ async function start() {
     return pending;
   });
 
-  fastify.post('/api/admin/approve/:id', { preValidation: [fastify.authenticate, fastify.requireAdmin] }, async (req, reply) => {
+  fastify.post('/api/admin/approve/:id', { preValidation: [(fastify as any).authenticate, (fastify as any).requireAdmin] }, async (req, reply) => {
     const { id } = req.params as { id: string };
     const user = await prisma.user.update({
       where: { id: parseInt(id) },
@@ -171,7 +178,7 @@ async function start() {
     return { success: true, user: { id: user.id, username: user.username } };
   });
 
-  fastify.delete('/api/admin/reject/:id', { preValidation: [fastify.authenticate, fastify.requireAdmin] }, async (req, reply) => {
+  fastify.delete('/api/admin/reject/:id', { preValidation: [(fastify as any).authenticate, (fastify as any).requireAdmin] }, async (req, reply) => {
     const { id } = req.params as { id: string };
     await prisma.user.delete({
       where: { id: parseInt(id) }
@@ -190,7 +197,7 @@ async function start() {
     return squawks;
   });
 
-  fastify.post('/api/squawk', { preValidation: [fastify.authenticate] }, async (req, res) => {
+  fastify.post('/api/squawk', { preValidation: [(fastify as any).authenticate] }, async (req, res) => {
     const { message, reply_to_id } = req.body as { message: string, reply_to_id?: number };
     const sessionUser = req.user; // Retrieved from JWT
     

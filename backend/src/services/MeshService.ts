@@ -67,18 +67,17 @@ export class MeshService {
         // Resolve author name (Long Name > node-hex)
         const author = this.nodeMap.get(packet.from) || `node-${senderId}`;
 
-        const newSquawk = await this.prisma.squawk.create({
+        const newSquawk = await (this.prisma.squawk.create({
           data: {
             author: author,
             node_id: senderId,
             message: message,
             is_global: true,
-            raw_packet: packet.id.toString(),
             snr: packet.snr,
             rssi: packet.rssi,
             hops: (packet as any).hopLimit
           }
-        });
+        }) as any);
 
         this.socketService.broadcastSquawk(newSquawk as any);
       });
