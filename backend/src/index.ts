@@ -42,10 +42,10 @@ async function start() {
   fastify.decorate('authenticate', async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       if (request.cookies.squawk_token) {
-        const decoded = await request.jwtVerify({ onlyCookie: true });
+        const decoded = await request.jwtVerify({ onlyCookie: true }) as any;
         request.user = decoded; // Explicitly assign decoded payload to user
       } else {
-        const decoded = await request.jwtVerify(); 
+        const decoded = await request.jwtVerify() as any; 
         request.user = decoded;
       }
     } catch (err) {
@@ -99,7 +99,7 @@ async function start() {
       id: user.id, 
       username: user.username, 
       is_admin: user.is_admin 
-    });
+    } as any);
 
     reply.setCookie('squawk_token', token, {
       path: '/',
@@ -131,7 +131,7 @@ async function start() {
       id: user.id, 
       username: user.username, 
       is_admin: user.is_admin 
-    });
+    } as any);
 
     reply.setCookie('squawk_token', token, {
       path: '/',
@@ -213,7 +213,7 @@ async function start() {
         reply_to_id: reply_to_id || null
       },
       include: { parent_squawk: true }
-    });
+    }) as any;
 
     socketService.broadcastSquawk(saved);
     

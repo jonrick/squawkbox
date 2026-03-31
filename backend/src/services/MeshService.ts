@@ -42,7 +42,7 @@ export class MeshService {
       console.log(`[MeshService] Successfully connected to Meshtastic Node!`);
 
       // Handle User Packets (for Long Names)
-      this.device.events.onUserPacket.subscribe((packet) => {
+      this.device.events.onUserPacket.subscribe((packet: any) => {
         const longName = packet.data.longName;
         if (longName) {
           this.nodeMap.set(packet.from, longName);
@@ -51,7 +51,7 @@ export class MeshService {
       });
 
       // Handle incoming signals (Text Messages)
-      this.device.events.onMessagePacket.subscribe(async (packet) => {
+      this.device.events.onMessagePacket.subscribe(async (packet: any) => {
         const message = packet.data;
         const senderId = packet.from.toString(16);
 
@@ -76,15 +76,15 @@ export class MeshService {
             raw_packet: packet.id.toString(),
             snr: packet.snr,
             rssi: packet.rssi,
-            hops: packet.hopLimit
+            hops: (packet as any).hopLimit
           }
         });
 
-        this.socketService.broadcastSquawk(newSquawk);
+        this.socketService.broadcastSquawk(newSquawk as any);
       });
 
       // Handle device status changes
-      this.device.events.onDeviceStatus.subscribe((status) => {
+      this.device.events.onDeviceStatus.subscribe((status: any) => {
         console.log(`[MeshService] Device Status Changed: ${status}`);
         if (status === 2) {
           this.handleDisconnect();
