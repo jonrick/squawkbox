@@ -19,34 +19,53 @@
 
 ## 🚀 Quick Start (Docker Compose)
 
-The fastest way to deploy SquawkBox is using Docker.
+No need to clone the full repository. SquawkBox ships pre-built Docker images for both AMD64 and ARM64. All you need are two files.
 
-### 1. Clone the Repository
-```bash
-git clone https://github.com/jonrick/squawkbox.git
-cd squawkbox
-```
+### 1. Download the Files
 
-### 2. Configure Environment
-Create a `.env` file in the root directory (using `.env.example` as a template).
+Grab the two files you need directly:
 
 ```bash
-# Meshtastic Hardware Connection
-MESHTASTIC_IP=192.168.1.100           # IP of your Meshtastic node
-MESHTASTIC_PORT=4403                   # Typically 4403 for TCP
-GATEWAY_NODE_ID=!a1b23c45              # Your Gateway Node ID (Hex)
-MESHTASTIC_CHANNEL=0                   # Default broadcast channel (0 = Primary)
-
-# Security
-JWT_SECRET=your_super_secret_key_here  # Change this!
-DATABASE_URL=file:./prisma/dev.db      # SQLite location
+curl -O https://raw.githubusercontent.com/jonrick/squawkbox/main/docker-compose.yml
+curl -O https://raw.githubusercontent.com/jonrick/squawkbox/main/.env.example
 ```
+
+Or manually download them from the [GitHub repository](https://github.com/jonrick/squawkbox).
+
+### 2. Configure Your Environment
+
+Rename `.env.example` to `.env` and fill in your values:
+
+```bash
+cp .env.example .env
+```
+
+```bash
+# --- MESHTASTIC CONNECTION ---
+MESHTASTIC_IP=192.168.1.100        # IP of your Meshtastic node
+MESHTASTIC_PORT=4403               # Typically 4403 for TCP
+GATEWAY_NODE_ID=!a1b2c3d4          # Your Gateway Node's hex ID
+MESHTASTIC_CHANNEL=0               # Channel index (0 = Primary)
+
+# --- SECURITY ---
+JWT_SECRET=your_super_secret_key   # Change this to something random!
+
+# --- FRONTEND ---
+# The IP/hostname of your server as seen by the browser
+API_URL=http://192.168.1.50:3001
+```
+
+> **Important:** Set `API_URL` to your **server's actual IP address** (not `localhost`), otherwise the browser won't be able to reach the backend.
 
 ### 3. Launch
+
 ```bash
-docker-compose up -d --build
+docker-compose up -d
 ```
-SquawkBox will be available at `http://localhost:3000`.
+
+SquawkBox will be available at `http://your-server-ip:3000`.
+
+The **first user to register** is automatically granted admin privileges.
 
 ---
 
