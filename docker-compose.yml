@@ -23,7 +23,7 @@ services:
     ports:
       - "${FRONTEND_PORT:-3000}:3000"
     environment:
-      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:3001}
+      - API_URL=${API_URL:-http://localhost:3001}
     depends_on:
       - backend
     restart: unless-stopped

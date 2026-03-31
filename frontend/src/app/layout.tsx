@@ -14,10 +14,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="bg-darkBg text-white antialiased" suppressHydrationWarning>
-        {/* Inject Runtime Config to bypass Next.js build-time "baking" */}
+        {/* Inject Runtime Config — uses private env var so it's read at SERVER runtime, not baked at build time */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `window.ENV = { API_URL: "${process.env.NEXT_PUBLIC_API_URL || ''}" };`,
+            __html: `window.ENV = { API_URL: "${process.env.API_URL || ''}" };`,
           }}
         />
         {/* Ambient Lighting Background */}
