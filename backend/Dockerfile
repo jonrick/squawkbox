@@ -6,5 +6,7 @@ RUN npm install
 COPY . .
 RUN npx prisma generate
 RUN npm run build
+RUN chmod +x entrypoint.sh
+
 EXPOSE 3001
-CMD ["npm", "start"]
+CMD ["./entrypoint.sh"]
