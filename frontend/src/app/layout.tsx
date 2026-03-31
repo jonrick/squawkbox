@@ -14,6 +14,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="bg-darkBg text-white antialiased" suppressHydrationWarning>
+        {/* Inject Runtime Config to bypass Next.js build-time "baking" */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `window.ENV = { API_URL: "${process.env.NEXT_PUBLIC_API_URL || ''}" };`,
+          }}
+        />
         {/* Ambient Lighting Background */}
         <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
           <div className="ambient-orb bg-orbCyan w-96 h-96 top-[-10%] left-[-10%]"></div>

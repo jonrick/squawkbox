@@ -5,8 +5,12 @@ import { io, Socket } from 'socket.io-client';
 import { Send, Radio, LogOut, ShieldCheck, Activity, Route, Signal, Reply, X, Github } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import manifest from '../../../version.json';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+// Dynamic Runtime API URL Injection (Allows Docker/Portainer .env changes WITHOUT rebuilds)
+const API_URL = (typeof window !== 'undefined' && (window as any).ENV?.API_URL) 
+  || process.env.NEXT_PUBLIC_API_URL 
+  || 'http://localhost:3001';
 
 interface Squawk {
   id: number;
@@ -117,7 +121,7 @@ export default function Home() {
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-3xl font-black tracking-tight leading-none">SQUAWK<span className="text-orbCyan">BOX</span></h1>
-              <span className="text-[10px] font-mono font-bold bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded border border-slate-700">v0.1.0</span>
+              <span className="text-[10px] font-mono font-bold bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded border border-slate-700">v{manifest.version}</span>
             </div>
             <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1.5 flex items-center gap-2">
               Shared Social Node <span className="text-slate-700">•</span> 
@@ -159,8 +163,8 @@ export default function Home() {
 
       {/* Compose Box */}
       {user && (
-        <div className="mb-8">
-          <form onSubmit={handleSubmit} className="relative glass-panel rounded-2xl overflow-hidden shadow-2xl transition-all focus-within:ring-1 ring-orbCyan/40 focus-within:border-orbCyan/50 border-slate-700/50">
+        <div className="mb-10">
+          <form onSubmit={handleSubmit} className="relative glass-panel rounded-2xl overflow-hidden transition-all focus-within:ring-1 ring-orbCyan/40 focus-within:border-orbCyan/50">
             {replyingTo && (
               <div className="flex items-center justify-between bg-slate-900/90 px-4 py-2.5 text-xs text-slate-400 border-b border-slate-700/50 backdrop-blur-sm">
                 <div className="flex items-center gap-2 overflow-hidden">
@@ -200,7 +204,7 @@ export default function Home() {
       {/* Feed Container */}
       <div className="flex-1 overflow-y-auto space-y-6 pb-12 pr-2 custom-scrollbar">
         {squawks.map((s) => (
-          <div key={s.id} className="glass-panel p-6 rounded-2xl flex flex-col gap-4 transition-all hover:bg-slate-800/40 group border-slate-700/30">
+          <div key={s.id} className="glass-panel p-7 rounded-2xl flex flex-col gap-5 transition-all hover:bg-slate-800/10 group shadow-lg">
             <div className="flex items-start justify-between">
               <div className="flex flex-col">
                 <span className="font-bold text-white text-xl tracking-tight leading-none">{s.author}</span>

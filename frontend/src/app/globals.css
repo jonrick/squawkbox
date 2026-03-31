@@ -16,7 +16,13 @@ body {
 }
 
 .glass-panel {
-  @apply bg-glassBg backdrop-blur-md border border-glassBorder shadow-2xl;
+  @apply bg-glassBg backdrop-blur-2xl border border-glassBorder shadow-2xl relative overflow-hidden;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+.glass-panel::before {
+  content: "";
+  @apply absolute inset-0 pointer-events-none border-t border-glassHighlight opacity-50;
 }
 
 .ambient-orb {

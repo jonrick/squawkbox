@@ -10,9 +10,9 @@ const config: Config = {
     extend: {
       colors: {
         darkBg: '#0f172a',
-        glassBg: 'rgba(30, 41, 59, 0.7)',
-        glassBorder: 'rgba(255, 255, 255, 0.1)',
-        orbCyan: '#06b6d4',
+        glassBg: 'rgba(15, 23, 42, 0.45)', // More translucent dark base
+        glassBorder: 'rgba(255, 255, 255, 0.08)',
+        glassHighlight: 'rgba(255, 255, 255, 0.12)',        orbCyan: '#06b6d4',
         orbPurple: '#8b5cf6'
       },
       backgroundImage: {
