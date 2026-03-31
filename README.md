@@ -84,4 +84,4 @@ We love contributions! SquawkBox is built with:
 ---
 
 ## 📜 License
-GNU GPL v3. Created by [jonrick](https://github.com/jonrick), assisted by [Antigravity](https://antigravity.ai/).
+GNU GPL v3. Created by [jonrick](https://github.com/jonrick), assisted by [Antigravity](https://antigravity.google/).
