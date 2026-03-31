@@ -1,3 +1,6 @@
+#SquawkBox
+*.db
+
 # Logs
 logs
 *.log
