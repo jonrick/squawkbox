@@ -18,11 +18,13 @@
     "@meshtastic/transport-node": "^0.0.2",
     "@prisma/client": "^5.10.0",
     "bcryptjs": "^3.0.3",
+    "dotenv": "^17.3.1",
     "fastify": "^4.26.1",
     "socket.io": "^4.7.4",
     "zod": "^3.22.4"
   },
   "devDependencies": {
+    "@esbuild/win32-x64": "^0.27.4",
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20.11.20",
     "prisma": "^5.10.0",

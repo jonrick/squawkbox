@@ -65,7 +65,20 @@ docker-compose up -d
 
 SquawkBox will be available at `http://your-server-ip:3000`.
 
-The **first user to register** is automatically granted admin privileges.
+The **first user to register** is automatically granted admin
+
+## 🚀 Getting Started
+
+SquawkBox is split into a **Frontend** and an **API Gateway**. To launch the entire system at once, you can use the newly created PowerShell script:
+
+```powershell
+.\start.ps1
+```
+
+This will automatically:
+1. Clean up any existing stale Node processes.
+2. Synchronize the Prisma database and regenerate the client.
+3. Launch both the Dashboard (Port 3000) and the API (Port 3001) in separate windows.
 
 ---
 

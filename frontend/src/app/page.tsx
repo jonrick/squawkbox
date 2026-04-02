@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
-import { Send, Radio, LogOut, ShieldCheck, Activity, Route, Signal, Reply, X, Github } from 'lucide-react';
+import { Send, Radio, LogOut, ShieldCheck, Activity, Route, Signal, Reply, X, Github, Settings } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import manifest from '../../version.json';
@@ -20,9 +20,9 @@ interface Squawk {
   node_id: string;
   message: string;
   is_global: boolean;
-  snr?: number;
-  rssi?: number;
-  hops?: number;
+  snr?: number | null;
+  rssi?: number | null;
+  hops?: number | null;
   created_at: string;
   parent_squawk?: Squawk;
 }
@@ -36,6 +36,15 @@ export default function Home() {
   const [user, setUser] = useState<any>(null);
   const socketRef = useRef<Socket | null>(null);
   const router = useRouter();
+
+  const fetchSquawks = useCallback(() => {
+    fetch(`${getApiUrl()}/api/squawks`)
+      .then(res => res.json())
+      .then(data => {
+        setSquawks(Array.isArray(data) ? data : []);
+      })
+      .catch(console.error);
+  }, []);
 
   useEffect(() => {
     const storedUser = localStorage.getItem('squawk_user');
@@ -53,14 +62,15 @@ export default function Home() {
       })
       .catch(console.error);
 
-    fetch(`${getApiUrl()}/api/squawks`)
-      .then(res => res.json())
-      .then(data => {
-        setSquawks(Array.isArray(data) ? data : []);
-      })
-      .catch(console.error);
+    fetchSquawks();
 
-    const socket = io(getApiUrl());
+    const socket = io(getApiUrl(), {
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      timeout: 20000,
+    });
     socketRef.current = socket;
 
     socket.on('new_squawk', (squawk: Squawk) => {
@@ -71,10 +81,23 @@ export default function Home() {
       setIsNodeOnline(isOnline);
     });
 
+    // Mobile: re-fetch squawks when tab becomes visible again to catch anything missed
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchSquawks();
+        // Also ensure socket is connected
+        if (socketRef.current && !socketRef.current.connected) {
+          socketRef.current.connect();
+        }
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     return () => {
       socket.disconnect();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, []);
+  }, [fetchSquawks]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -109,6 +132,9 @@ export default function Home() {
     if (minDiff < 60) return `${minDiff}M AGO`;
     return `${Math.floor(minDiff / 60)}H AGO`;
   }
+
+  // Normalize node_id: strip leading '!' since we add our own prefix in the template
+  const displayNodeId = (nodeId: string) => nodeId.replace(/^!+/, '');
 
   return (
     <div className="flex flex-col h-screen max-w-3xl mx-auto p-4 md:p-6 relative z-10 min-h-screen">
@@ -149,6 +175,9 @@ export default function Home() {
                     <ShieldCheck className="w-5 h-5" />
                   </Link>
                 )}
+                <Link href="/settings" className="p-2 text-slate-400 hover:text-orbCyan hover:bg-slate-700/60 rounded-xl transition-all" aria-label="Account Settings">
+                  <Settings className="w-5 h-5" />
+                </Link>
                 <button onClick={handleLogout} className="p-2 text-slate-400 hover:text-red-400 hover:bg-slate-700/60 rounded-xl transition-all" aria-label="Logout">
                   <LogOut className="w-5 h-5" />
                 </button>
@@ -212,7 +241,7 @@ export default function Home() {
                 <span className="font-bold text-white text-xl tracking-tight leading-none">{s.author}</span>
                 <span className="text-[10px] text-slate-500 font-bold tracking-widest uppercase mt-2 flex items-center gap-1.5 overflow-hidden max-w-full">
                    {!s.is_global ? `GATEWAY` : `REMOTE`} <span className="text-slate-800 px-1 font-normal opacity-50">|</span> 
-                   <span className="text-slate-400">ID: !{s.node_id}</span>
+                   <span className="text-slate-400">ID: !{displayNodeId(s.node_id)}</span>
                 </span>
               </div>
               <div className="flex items-center gap-3 text-[10px] text-slate-500 font-bold tracking-tighter uppercase">
@@ -237,19 +266,19 @@ export default function Home() {
 
             <p className="text-slate-200 text-lg leading-relaxed break-words whitespace-pre-wrap font-medium">{s.message}</p>
 
-            {(s.is_global && (s.snr !== undefined || s.rssi !== undefined)) && (
+            {(s.is_global && (s.snr != null || s.rssi != null)) && (
               <div className="flex flex-wrap items-center gap-3 mt-2 pt-5 border-t border-slate-700/20 opacity-60 group-hover:opacity-100 transition-all translate-y-1 group-hover:translate-y-0">
-                {s.snr !== undefined && (
+                {s.snr != null && (
                   <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/5 text-emerald-400 rounded-lg text-[10px] font-black border border-emerald-500/10 uppercase tracking-tighter">
                     <Signal className="w-3 h-3" /> SNR: {s.snr}
                   </div>
                 )}
-                {s.rssi !== undefined && (
+                {s.rssi != null && (
                   <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-500/5 text-amber-500 rounded-lg text-[10px] font-black border border-amber-500/10 uppercase tracking-tighter">
                     <Activity className="w-3 h-3" /> RSSI: {s.rssi}
                   </div>
                 )}
-                {s.hops !== undefined && (
+                {s.hops != null && (
                   <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/5 text-blue-400 rounded-lg text-[10px] font-black border border-blue-500/10 uppercase tracking-tighter">
                     <Route className="w-3 h-3" /> HOPS: {s.hops}
                   </div>

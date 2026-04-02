@@ -1,8 +1,13 @@
+import * as dotenv from 'dotenv';
+import path from 'path';
+dotenv.config({ path: path.join(__dirname, '../../.env') });
+
 import Fastify, { FastifyRequest, FastifyReply } from 'fastify';
 import cors from '@fastify/cors';
 import jwt from '@fastify/jwt';
 import bcrypt from 'bcryptjs';
 import { SocketService } from './services/SocketService';
+import { LogService } from './services/LogService';
 import { MeshService } from './services/MeshService';
 import { PrismaClient } from '@prisma/client';
 import fastifyCookie from '@fastify/cookie';
@@ -10,6 +15,7 @@ import fastifyCookie from '@fastify/cookie';
 const fastify = Fastify({ logger: true });
 const prisma = new PrismaClient();
 const GATEWAY_NODE_ID = process.env.GATEWAY_NODE_ID || '1234';
+const MIN_PASSWORD_LENGTH = parseInt(process.env.MIN_PASSWORD_LENGTH || '8');
 
 // JWT Configuration
 const JWT_SECRET = process.env.JWT_SECRET || 'squawkbox_super_secret_key_change_me';
@@ -73,7 +79,8 @@ async function start() {
   });
 
   const socketService = new SocketService(fastify.server);
-  const meshService = new MeshService(socketService, prisma, GATEWAY_NODE_ID);
+  const logService = new LogService();
+  const meshService = new MeshService(socketService, logService, prisma, GATEWAY_NODE_ID);
 
   fastify.get('/api/health', async () => {
     return { status: 'ok', node: GATEWAY_NODE_ID };
@@ -83,6 +90,16 @@ async function start() {
   fastify.post('/api/auth/register', async (req, reply) => {
     const { username, password } = req.body as any;
     if (!username || !password) return reply.status(400).send({ error: "Username and password required" });
+
+    if (password.length < MIN_PASSWORD_LENGTH) {
+      return reply.status(400).send({ error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.` });
+    }
+
+    // Check if registration is enabled
+    const regSetting = await prisma.setting.findUnique({ where: { key: 'registration_enabled' } });
+    if (regSetting && regSetting.value === 'false') {
+      return reply.status(403).send({ error: "Registration is currently closed." });
+    }
     
     // Check if user exists
     const existing = await prisma.user.findUnique({ where: { username } });
@@ -130,6 +147,10 @@ async function start() {
       return reply.status(401).send({ error: "Invalid credentials" });
     }
 
+    if (user.is_banned) {
+      return reply.status(403).send({ error: "Account has been banned." });
+    }
+
     if (!user.is_approved) {
       return reply.status(403).send({ error: "Account pending admin approval." });
     }
@@ -160,6 +181,32 @@ async function start() {
     return { user: req.user };
   });
 
+  // --- CHANGE PASSWORD ---
+  fastify.post('/api/auth/change-password', { preValidation: [(fastify as any).authenticate] }, async (req, reply) => {
+    const { currentPassword, newPassword } = req.body as { currentPassword: string; newPassword: string };
+    
+    if (!currentPassword || !newPassword) {
+      return reply.status(400).send({ error: "Current and new password required." });
+    }
+    if (newPassword.length < MIN_PASSWORD_LENGTH) {
+      return reply.status(400).send({ error: `New password must be at least ${MIN_PASSWORD_LENGTH} characters.` });
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+    if (!user) return reply.status(404).send({ error: "User not found." });
+
+    const valid = await bcrypt.compare(currentPassword, user.password_hash);
+    if (!valid) return reply.status(401).send({ error: "Current password is incorrect." });
+
+    const hash = await bcrypt.hash(newPassword, 10);
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { password_hash: hash }
+    });
+
+    return { success: true };
+  });
+
   // --- ADMIN ROUTES ---
   fastify.get('/api/admin/pending', { preValidation: [(fastify as any).authenticate, (fastify as any).requireAdmin] }, async (req, reply) => {
     const pending = await prisma.user.findMany({
@@ -184,6 +231,85 @@ async function start() {
       where: { id: parseInt(id) }
     });
     return { success: true };
+  });
+
+  // --- ADMIN: USER MANAGEMENT ---
+  fastify.get('/api/admin/users', { preValidation: [(fastify as any).authenticate, (fastify as any).requireAdmin] }, async (req, reply) => {
+    const users = await prisma.user.findMany({
+      select: { id: true, username: true, is_approved: true, is_admin: true, is_banned: true, created_at: true },
+      orderBy: { created_at: 'desc' }
+    });
+    return users;
+  });
+
+  fastify.post('/api/admin/ban/:id', { preValidation: [(fastify as any).authenticate, (fastify as any).requireAdmin] }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const targetId = parseInt(id);
+    
+    // Prevent self-ban
+    if (targetId === req.user.id) {
+      return reply.status(400).send({ error: "Cannot ban yourself." });
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: targetId } });
+    if (!user) return reply.status(404).send({ error: "User not found." });
+
+    const updated = await prisma.user.update({
+      where: { id: targetId },
+      data: { is_banned: !user.is_banned }
+    });
+    return { success: true, user: { id: updated.id, username: updated.username, is_banned: updated.is_banned } };
+  });
+
+  fastify.delete('/api/admin/user/:id', { preValidation: [(fastify as any).authenticate, (fastify as any).requireAdmin] }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const targetId = parseInt(id);
+    
+    // Prevent self-delete
+    if (targetId === req.user.id) {
+      return reply.status(400).send({ error: "Cannot delete yourself." });
+    }
+
+    await prisma.user.delete({ where: { id: targetId } });
+    return { success: true };
+  });
+
+  // --- ADMIN: SETTINGS ---
+  fastify.get('/api/admin/settings', { preValidation: [(fastify as any).authenticate, (fastify as any).requireAdmin] }, async (req, reply) => {
+    const settings = await prisma.setting.findMany();
+    const result: Record<string, string> = {};
+    for (const s of settings) {
+      result[s.key] = s.value;
+    }
+    return result;
+  });
+
+  fastify.post('/api/admin/settings', { preValidation: [(fastify as any).authenticate, (fastify as any).requireAdmin] }, async (req, reply) => {
+    const body = req.body as Record<string, string>;
+    
+    for (const [key, value] of Object.entries(body)) {
+      await prisma.setting.upsert({
+        where: { key },
+        update: { value: String(value) },
+        create: { key, value: String(value) }
+      });
+    }
+    return { success: true };
+  });
+
+  // --- PUBLIC SETTINGS (for registration check) ---
+  fastify.get('/api/settings/public', async (req, reply) => {
+    const regSetting = await prisma.setting.findUnique({ where: { key: 'registration_enabled' } });
+    return { 
+      registration_enabled: regSetting ? regSetting.value !== 'false' : true,
+      min_password_length: MIN_PASSWORD_LENGTH
+    };
+  });
+
+  // --- ADMIN: NODE LOGS ---
+  fastify.get('/api/admin/logs', { preValidation: [(fastify as any).authenticate, (fastify as any).requireAdmin] }, async (req, reply) => {
+    const { count } = req.query as { count?: string };
+    return meshService.getLogs(count ? parseInt(count) : 200);
   });
 
 
@@ -224,10 +350,30 @@ async function start() {
 
     socketService.broadcastSquawk(saved);
     
-    // Pass the real Mesh ID of the parent to the radio if it exists
-    const nativeReplyId = saved.parent_squawk?.raw_packet ? parseInt(saved.parent_squawk.raw_packet) : undefined;
+    // Resolve native reply ID and native destination node (required for official client threading)
+    let nativeReplyId: number | undefined;
+    let nativeToId: number | undefined;
+
+    if (saved.parent_squawk) {
+      if (saved.parent_squawk.mesh_packet_id) {
+        nativeReplyId = parseInt(saved.parent_squawk.mesh_packet_id);
+      }
+      if (saved.parent_squawk.node_id) {
+        // Convert Hex node ID (e.g. 'a0352680') to numeric destination for the protocol
+        nativeToId = parseInt(saved.parent_squawk.node_id, 16);
+      }
+    }
     
-    meshService.queueMessage(fullMessage, nativeReplyId);
+    // Send to mesh and capture the outbound packet ID
+    const meshPacketId = await meshService.queueMessage(fullMessage, nativeReplyId, nativeToId);
+    
+    // Store the mesh packet ID on the squawk for future reply matching
+    if (meshPacketId) {
+      await prisma.squawk.update({
+        where: { id: saved.id },
+        data: { mesh_packet_id: String(meshPacketId) }
+      });
+    }
     
     return { success: true, squawk: saved };
   });

@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Send, ShieldAlert, Fingerprint } from 'lucide-react';
+import { Send, ShieldAlert, Fingerprint, Lock } from 'lucide-react';
 import Link from 'next/link';
 
 const getApiUrl = () => (typeof window !== 'undefined' && (window as any).ENV?.API_URL) ? (window as any).ENV.API_URL : 'http://localhost:3001';
@@ -12,7 +12,20 @@ export default function Register() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [status, setStatus] = useState<'idle' | 'success'>('idle');
+  const [registrationOpen, setRegistrationOpen] = useState<boolean | null>(null);
+  const [minPasswordLength, setMinPasswordLength] = useState(8);
   const router = useRouter();
+
+  useEffect(() => {
+    // Check if registration is enabled
+    fetch(`${getApiUrl()}/api/settings/public`)
+      .then(res => res.json())
+      .then(data => {
+        setRegistrationOpen(data.registration_enabled);
+        if (data.min_password_length) setMinPasswordLength(data.min_password_length);
+      })
+      .catch(() => setRegistrationOpen(true)); // Default to open if can't reach
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,6 +36,11 @@ export default function Register() {
       return;
     }
 
+    if (password.length < minPasswordLength) {
+      setError(`Password must be at least ${minPasswordLength} characters.`);
+      return;
+    }
+
     try {
       const res = await fetch(`${getApiUrl()}/api/auth/register`, {
         method: 'POST',
@@ -30,14 +48,14 @@ export default function Register() {
         credentials: 'include',
         body: JSON.stringify({ username, password })
       });
-      
+
       const data = await res.json();
       if (!res.ok) {
         throw new Error(data.error || 'Registration failed');
       }
 
       setStatus('success');
-      
+
       // If auto-approved (first user), they can login immediately.
       // We will just redirect to login so they can authenticate.
       setTimeout(() => {
@@ -48,6 +66,31 @@ export default function Register() {
       setError(err.message);
     }
   };
+
+  // Registration closed state
+  if (registrationOpen === false) {
+    return (
+      <div className="flex flex-col h-screen max-w-sm mx-auto justify-center p-6 relative z-10">
+        <div className="glass-panel p-8 flex flex-col items-center text-center gap-4 rounded-3xl border-red-500/20 border">
+          <Lock className="w-12 h-12 text-red-400" />
+          <h2 className="text-xl font-bold">Registration Closed</h2>
+          <p className="text-slate-400 text-sm">New account creation is currently disabled by the gateway admin.</p>
+          <Link href="/login" className="mt-2 text-orbCyan text-sm font-mono hover:underline">
+            HAVE AN ACCOUNT? LOGIN
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // Loading state
+  if (registrationOpen === null) {
+    return (
+      <div className="flex flex-col h-screen max-w-sm mx-auto justify-center p-6 relative z-10">
+        <div className="text-center text-slate-500 font-mono text-sm animate-pulse">Checking registration status...</div>
+      </div>
+    );
+  }
 
   if (status === 'success') {
     return (
@@ -64,7 +107,7 @@ export default function Register() {
   return (
     <div className="flex flex-col h-screen max-w-sm mx-auto justify-center p-6 relative z-10">
       <div className="glass-panel p-8 rounded-3xl border-t border-glassBorder shadow-2xl flex flex-col gap-6">
-        
+
         <div className="text-center space-y-2">
           <h1 className="text-2xl font-bold tracking-wider">SQUAWK<span className="text-orbCyan">BOX</span></h1>
           <p className="text-xs text-slate-500 font-mono tracking-widest">ACCOUNT REGISTRATION</p>
@@ -79,28 +122,29 @@ export default function Register() {
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="space-y-1">
-            <label className="text-xs font-mono text-slate-400 ml-1">USERNAME (@username)</label>
-            <input 
-              type="text" 
+            <label className="text-xs font-mono text-slate-400 ml-1">USERNAME</label>
+            <input
+              type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               className="w-full bg-slate-900/50 border border-slate-700/50 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orbCyan transition-colors font-mono placeholder:text-slate-600"
-              placeholder="e.g. ghost_actual"
+              placeholder="e.g. Squawker"
               maxLength={16}
             />
           </div>
 
           <div className="space-y-1">
             <label className="text-xs font-mono text-slate-400 ml-1">PASSWORD</label>
-            <input 
-              type="password" 
+            <input
+              type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full bg-slate-900/50 border border-slate-700/50 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orbCyan transition-colors font-mono"
             />
+            <p className="text-[10px] text-slate-600 font-mono ml-1">Minimum {minPasswordLength} characters</p>
           </div>
 
-          <button 
+          <button
             type="submit"
             disabled={!username || !password}
             className="mt-2 w-full bg-orbCyan/20 hover:bg-orbCyan/30 text-orbCyan border border-orbCyan/30 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all disabled:opacity-50"
